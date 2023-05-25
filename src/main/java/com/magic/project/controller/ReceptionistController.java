@@ -6,13 +6,16 @@ import com.magic.project.models.dto.ReceptionistDto;
 import com.magic.project.models.dto.ReceptionistUserMapper;
 import com.magic.project.services.ReceptionistService;
 import com.magic.project.services.UserService;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.server.ServerResponse;
 
 import javax.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("hospital/receptionist")
@@ -24,35 +27,46 @@ public class ReceptionistController {
 
 	// Add a receptionist
 	@PostMapping("/add")
-	public ResponseEntity<Receptionist> addReceptionist(@Valid @RequestBody ReceptionistDto receptionistDto) {
-		Receptionist receptionist = ReceptionistUserMapper.mapToReceptionist(receptionistDto);
-		User user = ReceptionistUserMapper.mapToUser(receptionistDto);
-		recepServ.saveReceptionist(receptionist);
-		user.setUsername(receptionist.getEmail());
-		userServ.saveUser(user);
-		return ResponseEntity.status(HttpStatus.OK).body(receptionist);
+	public Mono<ServerResponse> addReceptionist(@Valid @RequestBody Mono<ReceptionistDto> receptionistDtoMono) {
+		return receptionistDtoMono.flatMap(receptionistDto -> {
+			Receptionist receptionist = ReceptionistUserMapper.mapToReceptionist(receptionistDto);
+			User user = ReceptionistUserMapper.mapToUser(receptionistDto);
+			Mono<Receptionist> receptionistMono = recepServ.saveReceptionist(receptionist);
+			user.setUsername(receptionist.getEmail());
+			userServ.saveUser(user);
+			return ServerResponse.ok()
+					.contentType(MediaType.APPLICATION_JSON)
+					.body(receptionistMono,
+					Receptionist.class);
+		});
 	}
 
 	// delete a receptionist
 	@DeleteMapping("/delete/{email}")
-	public ResponseEntity<Receptionist> deleteReceptionist(@Valid @PathVariable String email) {
-		Receptionist receptionist = recepServ.deleteReceptionist(email);
-		return ResponseEntity.status(HttpStatus.OK).body(receptionist);
+	public Mono<ServerResponse> deleteReceptionist(@Valid @PathVariable String email) {
+		Mono<Receptionist> receptionistMono = recepServ.deleteReceptionist(email);
+		return ServerResponse.ok()
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(receptionistMono, Receptionist.class);
 	}
 
 	// update a receptionist by ID and Put request
 	@PutMapping("/update/{email}")
-	public ResponseEntity<Receptionist> updateReceptionist(@Valid @PathVariable String email,
+	public Mono<ServerResponse> updateReceptionist(@Valid @PathVariable String email,
 			@RequestBody Receptionist updatedReceptionist) {
-		Receptionist receptionist = recepServ.updateReceptionist(updatedReceptionist, email);
-		return ResponseEntity.status(HttpStatus.OK).body(receptionist);
+		Mono<Receptionist> receptionistMono = recepServ.updateReceptionist(updatedReceptionist, email);
+		return ServerResponse.ok()
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(receptionistMono, Receptionist.class);
 	}
 
 	// get list of all receptionists
 	@GetMapping("/list")
-	public ResponseEntity<List<Receptionist>> getAllReceptionist() {
-		List<Receptionist> receptionists = recepServ.getReceptionistList();
-		return ResponseEntity.status(HttpStatus.OK).body(receptionists);
+	public Mono<ServerResponse> getAllReceptionist() {
+		Flux<Receptionist> receptionistsFlux = recepServ.getReceptionistList();
+		return ServerResponse.ok()
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(receptionistsFlux, Receptionist.class);
 	}
 
 }

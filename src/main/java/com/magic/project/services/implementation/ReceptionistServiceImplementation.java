@@ -4,11 +4,14 @@ import com.magic.project.handler.ReceptionistNotFoundException;
 import com.magic.project.models.Receptionist;
 import com.magic.project.repository.ReceptionistRepository;
 import com.magic.project.services.ReceptionistService;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.validation.Valid;
-import java.util.List;
 
 @Service
 public class ReceptionistServiceImplementation implements ReceptionistService {
@@ -16,39 +19,32 @@ public class ReceptionistServiceImplementation implements ReceptionistService {
 	ReceptionistRepository recepRepo;
 
 	@Override
-	public void saveReceptionist(@Valid Receptionist receptionist) {
-		recepRepo.save(receptionist);
-
+	public Mono<Receptionist> saveReceptionist(@Valid Receptionist receptionist) {
+		return recepRepo.save(receptionist);
 	}
 
 	@Override
-	public Receptionist deleteReceptionist(@Valid String email) {
-		Receptionist receptionist = recepRepo.findById(email).orElse(null);
-		if (receptionist == null) {
-			throw new ReceptionistNotFoundException("No Receptionist with ID " + email);
-		}
-		recepRepo.deleteById(email);
-		return receptionist;
+	public Mono<Receptionist> deleteReceptionist(@Valid String email) {
+		return recepRepo.findById(email)
+				.switchIfEmpty(Mono.error(new ReceptionistNotFoundException("No Receptionist with ID " + email)))
+				.flatMap(receptionist -> recepRepo.deleteById(email).thenReturn(receptionist));
+				
 	}
 
 	@Override
-	public Receptionist updateReceptionist(Receptionist updatedReceptionist, @Valid String email) {
-		Receptionist receptionist = recepRepo.findById(email).orElse(null);
-		if (receptionist == null) {
-			throw new ReceptionistNotFoundException("No Receptionist with ID " + email);
-		}
-		updatedReceptionist.setEmail(email);
-		recepRepo.save(updatedReceptionist);
-		return updatedReceptionist;
+	public Mono<Receptionist> updateReceptionist(Receptionist updatedReceptionist, @Valid String email) {
+		return recepRepo.findById(email)
+				.switchIfEmpty(Mono.error(new ReceptionistNotFoundException("No Receptionist with ID " + email)))
+				.flatMap(receptionist -> {
+					updatedReceptionist.setEmail(email);
+					return recepRepo.save(updatedReceptionist);});
 	}
 
 	@Override
-	public List<Receptionist> getReceptionistList() {
-		List<Receptionist> receptionists = recepRepo.findAll();
-		if (receptionists == null) {
-			throw new ReceptionistNotFoundException("No Receptionist Found.");
-		}
-		return receptionists;
+	public Flux<Receptionist> getReceptionistList() {
+		Flux<Receptionist> receptionistsFlux = recepRepo.findAll();
+		return receptionistsFlux
+				.switchIfEmpty(Mono.error(new ReceptionistNotFoundException("No Receptionist Found.")));
 	}
 
 }

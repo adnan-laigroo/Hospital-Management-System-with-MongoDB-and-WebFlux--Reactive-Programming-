@@ -26,8 +26,9 @@ public class DoctorServiceImplementation implements DoctorService {
 	@Override
 	public Mono<Doctor> deleteDoctor(@Valid String email) {
 		return docRepo.findById(email)
-				.flatMap(doctor -> docRepo.deleteById(email).thenReturn(doctor))
-				.switchIfEmpty(Mono.error(new DoctorNotFoundException("No doctor found with ID " + email)));
+				.switchIfEmpty(Mono.error(new DoctorNotFoundException("No doctor found with ID " + email)))
+				.flatMap(doctor -> docRepo.deleteById(email).thenReturn(doctor));
+				
 	}
 
 	@Override
