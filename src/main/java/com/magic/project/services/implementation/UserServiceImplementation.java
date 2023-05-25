@@ -5,11 +5,14 @@ import com.magic.project.models.Password;
 import com.magic.project.models.User;
 import com.magic.project.repository.UserDRepository;
 import com.magic.project.services.UserService;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.validation.Valid;
-import java.util.List;
 
 @Service
 public class UserServiceImplementation implements UserService {
@@ -18,26 +21,27 @@ public class UserServiceImplementation implements UserService {
 	UserDRepository userRepo;
 
 	@Override
-	public User updateUserPassword(@Valid Password updatedPassword, String username) {
-		User user = userRepo.findById(username).orElse(null);
-		if (user == null) {
-			throw new UserNotFoundException("No User Found with Username: " + username);
-		}
-		userRepo.save(user);
-		return user;
+	public Mono<User> updateUserPassword(@Valid Password updatedPassword, String username) {
+		return userRepo.findById(username)
+				.switchIfEmpty(Mono.error(new UserNotFoundException("No User Found with Username: " + username)))
+				.flatMap(user -> {
+					user.setPassword(updatedPassword.getPassword());
+					return userRepo.save(user);
+				});
 	}
 
 	@Override
-	public void saveUser(@Valid User user) {
-		userRepo.save(user);
+	public Mono<User> saveUser(@Valid User user) {
+		return userRepo.save(user);
 	}
 
 	@Override
-	public List<User> getUserList() {
-		List<User> users = userRepo.findAll();
-		if (users.isEmpty()) {
-			throw new UserNotFoundException("No User Found.");
-		}
-		return users;
+	public Flux<User> getUserList() {
+		Flux<User> users = userRepo.findAll();
+		return users
+				.switchIfEmpty
+				(Mono.error
+						(new UserNotFoundException
+								("No User Found.")));
 	}
 }
