@@ -2,13 +2,15 @@ package com.magic.project.controller;
 
 import com.magic.project.models.Patient;
 import com.magic.project.services.PatientService;
+
+import reactor.core.publisher.Mono;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.server.ServerResponse;
 
 import javax.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("hospital/patient")
@@ -18,30 +20,35 @@ public class PatientController {
 
 	// Add a Patient
 	@PostMapping("/add")
-	public ResponseEntity<Patient> addPatient(@Valid @RequestBody Patient patient) {
-		patServ.savePatient(patient);
-		return ResponseEntity.status(HttpStatus.OK).body(patient);
+	public Mono<ServerResponse> addPatient(@Valid @RequestBody Mono<Patient> patientMono) {
+		patientMono.flatMap(patient -> patServ.savePatient(patient));
+		return ServerResponse.ok()
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(patientMono, Patient.class);
 	}
 
 	// delete a Patient
 	@DeleteMapping("/delete/{patId}")
-	public ResponseEntity<Patient> deletePatient(@Valid @PathVariable String patId) {
-		Patient patient = patServ.deletePatient(patId);
-		return ResponseEntity.status(HttpStatus.OK).body(patient);
+	public Mono<ServerResponse> deletePatient(@Valid @PathVariable String patId) {
+		return ServerResponse.ok()
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(patServ.deletePatient(patId), Patient.class);
 	}
 
 	// update a Patient by ID and Put request
 	@PutMapping("/update/{patId}")
-	public ResponseEntity<Patient> updatePatient(@Valid @PathVariable String patId,
+	public Mono<ServerResponse> updatePatient(@Valid @PathVariable String patId,
 			@RequestBody Patient updatedPatient) {
-		Patient patient = patServ.updatePatient(updatedPatient, patId);
-		return ResponseEntity.status(HttpStatus.OK).body(patient);
+		return ServerResponse.ok()
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(patServ.updatePatient(updatedPatient, patId), Patient.class);
 	}
 
 	// get list of all Patients
 	@GetMapping("/list")
-	public ResponseEntity<List<Patient>> getAllPatient() {
-		List<Patient> patients = patServ.getPatientList();
-		return ResponseEntity.status(HttpStatus.OK).body(patients);
+	public Mono<ServerResponse>  getAllPatient() { 
+		return ServerResponse.ok()
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(patServ.getPatientList(), Patient.class);
 	}
 }

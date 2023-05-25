@@ -2,17 +2,19 @@ package com.magic.project.services;
 
 import com.magic.project.models.Patient;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import javax.validation.Valid;
-import java.util.List;
 
 public interface PatientService {
 
-	void savePatient(@Valid Patient patient);
+	Mono<Patient> savePatient(@Valid Patient patient);
 
-	Patient deletePatient(@Valid String patId);
+	Mono<Patient> deletePatient(@Valid String patId);
 
-	Patient updatePatient(Patient updatedPatient, @Valid String patId);
+	Mono<Patient> updatePatient(Patient updatedPatient, @Valid String patId);
 
-	List<Patient> getPatientList();
+	Flux<Patient> getPatientList();
 
 }

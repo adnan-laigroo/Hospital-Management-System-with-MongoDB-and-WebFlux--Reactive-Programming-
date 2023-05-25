@@ -2,19 +2,21 @@ package com.magic.project.services;
 
 import com.magic.project.models.Appointment;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import javax.validation.Valid;
-import java.util.List;
 
 public interface AppointmentService {
 
-	void saveAppointment(@Valid Appointment appointment);
+	Mono<Appointment> saveAppointment(@Valid Appointment appointment);
 
-	Appointment deleteAppointment(@Valid String appId);
+	Mono<Appointment> deleteAppointment(@Valid String appId);
 
-	Appointment updateAppointment(Appointment updatedAppointment, @Valid String appId);
+	Mono<Appointment> updateAppointment(Appointment updatedAppointment, @Valid String appId);
 	
-	List<Appointment> getAppointmentList();
+	Flux<Appointment> getAppointmentList();
 
-	Appointment updateAppointmentStatus(Appointment updatedAppointment, @Valid String appId);
+	Mono<Appointment> updateAppointmentStatus(Appointment updatedAppointment, @Valid String appId);
 
 }
