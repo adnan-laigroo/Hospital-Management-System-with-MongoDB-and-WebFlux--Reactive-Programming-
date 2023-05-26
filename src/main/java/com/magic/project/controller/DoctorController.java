@@ -15,13 +15,12 @@ import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 
 @RestController
 @RequestMapping("hospital/doctor")
-public class DoctorController {
+public class DoctorController  {
 	
 	@Autowired
 	DoctorService docServ;
@@ -29,9 +28,10 @@ public class DoctorController {
 	@Autowired
 	UserService userServ;
 
+
 	// Add an doctor
 	@PostMapping("/add")
-	public Mono<ServerResponse> addDoctor(ServerRequest request, @Valid Mono<DoctorDto> doctorDtoMono) {
+	public Mono<ServerResponse> addDoctor(Mono<DoctorDto> doctorDtoMono) {
 	    return doctorDtoMono.flatMap(doctorDto -> {
 	        Doctor doctor = DoctorUserMapper.mapToDoctor(doctorDto);
 	        User user = DoctorUserMapper.mapToUser(doctorDto);
