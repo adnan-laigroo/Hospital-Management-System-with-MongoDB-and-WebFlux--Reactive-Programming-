@@ -1,8 +1,8 @@
 package com.magic.project.services.implementation;
 
-import com.magic.project.handler.AppointmentNotConfirmedException;
-import com.magic.project.handler.DoctorNotFoundException;
-import com.magic.project.handler.PatientNotFoundException;
+import com.magic.project.exceptionHandler.AppointmentNotConfirmedException;
+import com.magic.project.exceptionHandler.DoctorNotFoundException;
+import com.magic.project.exceptionHandler.PatientNotFoundException;
 import com.magic.project.models.Appointment;
 import com.magic.project.models.Doctor;
 import com.magic.project.models.Patient;
@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @Service
 public class AppointmentServiceImplementation implements AppointmentService {
@@ -53,7 +54,6 @@ public class AppointmentServiceImplementation implements AppointmentService {
 
 	@Override
 	public Mono<Appointment> saveAppointment(@Valid Appointment appointment) {
-
 		appointment.setAppointmentDate(LocalDate.now());
 		appointment.setAppointmentTime(LocalTime.parse(appointment.getAppointmentTime(), formatter).format(formatter));
 		appointment.setAppointmentStatus("Pending");
@@ -61,33 +61,39 @@ public class AppointmentServiceImplementation implements AppointmentService {
 			throw new AppointmentNotConfirmedException("Appointment for time: " + appointment.getAppointmentTime()
 					+ " can't be booked before: " + LocalTime.now());
 		}
+		Mono<Patient> patientMono = patRepo.findById(appointment.getPatId()).switchIfEmpty(
+				Mono.error(new PatientNotFoundException("No patient found of patient Id: " + appointment.getPatId())));
+		Mono<List<Doctor>> doctorListMono = patientMono.flatMap(patient -> {
+			return docRepo.findBySpeciality(symptomSpecialityMap.get(patient.getSymptom()))
+					.switchIfEmpty(Mono
+							.error(new DoctorNotFoundException("No doctor found for symptom " + patient.getSymptom())))
+					.collectList();
+			Mono<Appointment> doctorwithLeastPendingAppointmentsMono = doctorListMono.flatMap(doctortList -> {
+				String doctorWithLeastPendingAppointments = getDoctorWithLeastPendingAppointments(doctorList);
+				return appRepo.findByDocId(doctorWithLeastPendingAppointments).collectList()
+						.flatMap(doctorAppointments -> {
+							for (Appointment existingAppointment : doctorAppointments) {
+								if (existingAppointment.getAppointmentDate().equals(appointment.getAppointmentDate())
+										&& existingAppointment.getAppointmentTime()
+												.equals(appointment.getAppointmentTime())) {
+									// Appointment time conflict found, remove the doctor and get the next available
+									// doctor
+									String oldDoctor = doctorWithLeastPendingAppointments;
+									doctorList.removeIf(doctor -> doctor.getEmail().equals(oldDoctor));
+									doctorWithLeastPendingAppointments = getDoctorWithLeastPendingAppointments(
+											doctorList);
+									break;
+								}
+							}
+							appointment.setDocId(doctorWithLeastPendingAppointments);
+							return Mono.just(appointment);
+						});
+			});
+			// Check if the appointment time conflicts with existing appointments for the
+			// doctor with least pending appointments
 
-		return patRepo.findById(appointment.getPatId())
-				.switchIfEmpty(Mono.error(
-						new PatientNotFoundException("No patient found of patient Id: " + appointment.getPatId())))
-				.flatMap(patient -> {
-					List<Doctor> doctorList = docRepo.findBySpeciality(symptomSpecialityMap.get(patient.getSymptom()));
-					if (doctorList.isEmpty()) {
-						throw new DoctorNotFoundException("No doctor found for symptom " + patient.getSymptom());
-					}
-					// Check if the appointment time conflicts with existing appointments for the
-					// doctor with least pending appointments
-					String doctorWithLeastPendingAppointments = getDoctorWithLeastPendingAppointments(doctorList);
-					List<Appointment> doctorAppointments = appRepo.findByDocId(doctorWithLeastPendingAppointments);
-					for (Appointment existingAppointment : doctorAppointments) {
-						if (existingAppointment.getAppointmentDate().equals(appointment.getAppointmentDate())
-								&& existingAppointment.getAppointmentTime().equals(appointment.getAppointmentTime())) {
-							// Appointment time conflict found, remove the doctor and get the next available
-							// doctor
-							String oldDoctor = doctorWithLeastPendingAppointments;
-							doctorList.removeIf(doctor -> doctor.getEmail().equals(oldDoctor));
-							doctorWithLeastPendingAppointments = getDoctorWithLeastPendingAppointments(doctorList);
-							break;
-						}
-					}
-					appointment.setDocId(doctorWithLeastPendingAppointments);
-					return appRepo.save(appointment);
-				});
+		});
+		return appRepo.save(appointment);
 	}
 
 	private String getDoctorWithLeastPendingAppointments(List<Doctor> doctorList) {
@@ -105,12 +111,10 @@ public class AppointmentServiceImplementation implements AppointmentService {
 
 	private int countPendingAppointments(String email) {
 		int count = 0;
-		List<Appointment> appointments = appRepo.findByDocId(email);
-		for (Appointment appointment : appointments) {
-			if (appointment.getAppointmentStatus().equals("Pending")) {
-				count++;
-			}
-		}
+		Flux<Appointment> appointments = appRepo.findByDocId(email);
+		appointments.filter(appointment -> appointment.getAppointmentStatus().equals("Pending"));
+		count = appointments.toStream().filter(appointment -> appointment.getAppointmentStatus().equals("Pending"))
+				.collect(Collectors.toList()).size();
 		return count;
 	}
 

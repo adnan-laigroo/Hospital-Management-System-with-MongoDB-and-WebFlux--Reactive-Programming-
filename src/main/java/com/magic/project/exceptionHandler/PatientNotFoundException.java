@@ -1,4 +1,4 @@
-package com.magic.project.handler;
+package com.magic.project.exceptionHandler;
 
 public class PatientNotFoundException extends RuntimeException {
 

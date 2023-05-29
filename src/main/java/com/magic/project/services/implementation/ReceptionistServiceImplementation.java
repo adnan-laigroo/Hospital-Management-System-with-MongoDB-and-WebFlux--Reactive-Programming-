@@ -1,6 +1,6 @@
 package com.magic.project.services.implementation;
 
-import com.magic.project.handler.ReceptionistNotFoundException;
+import com.magic.project.exceptionHandler.ReceptionistNotFoundException;
 import com.magic.project.models.Receptionist;
 import com.magic.project.repository.ReceptionistRepository;
 import com.magic.project.services.ReceptionistService;

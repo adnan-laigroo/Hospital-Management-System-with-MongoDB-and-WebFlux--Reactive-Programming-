@@ -1,6 +1,6 @@
 package com.magic.project.services.implementation;
 
-import com.magic.project.handler.UserNotFoundException;
+import com.magic.project.exceptionHandler.UserNotFoundException;
 import com.magic.project.models.Password;
 import com.magic.project.models.User;
 import com.magic.project.repository.UserDRepository;

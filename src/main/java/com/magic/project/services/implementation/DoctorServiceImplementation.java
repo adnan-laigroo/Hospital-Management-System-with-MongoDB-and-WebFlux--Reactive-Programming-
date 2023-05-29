@@ -1,6 +1,6 @@
 package com.magic.project.services.implementation;
 
-import com.magic.project.handler.DoctorNotFoundException;
+import com.magic.project.exceptionHandler.DoctorNotFoundException;
 import com.magic.project.models.Doctor;
 import com.magic.project.repository.DoctorRepository;
 import com.magic.project.services.DoctorService;
