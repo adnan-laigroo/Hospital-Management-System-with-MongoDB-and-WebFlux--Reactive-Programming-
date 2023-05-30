@@ -17,7 +17,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Setter
 @Getter
-@Document("user")
+@Document("users")
 public class User {
 	@Id
 	@NotBlank(message = "Username is required")

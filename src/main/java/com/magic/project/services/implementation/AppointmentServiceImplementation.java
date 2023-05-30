@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 @Service
 public class AppointmentServiceImplementation implements AppointmentService {
@@ -54,14 +53,13 @@ public class AppointmentServiceImplementation implements AppointmentService {
 	}
 
 	@Override
-	public Mono<Appointment> saveAppointment(@Valid Appointment appointment) {
+	public Mono<Appointment> saveOtherAppointment(@Valid Appointment appointment) {
 		LocalDateTime currentDateTime = LocalDateTime.now();
 		LocalTime appointmentTime = LocalTime.parse(appointment.getAppointmentTime(), formatter);
 		if (appointmentTime.isBefore(currentDateTime.toLocalTime())) {
 			return Mono.error(new AppointmentNotConfirmedException("Appointment for time: "
 					+ appointment.getAppointmentTime() + " can't be booked before: " + currentDateTime.toLocalTime()));
 		}
-
 		Mono<Patient> patientMono = patRepo.findById(appointment.getPatId()).switchIfEmpty(
 				Mono.error(new PatientNotFoundException("No patient found of patient Id: " + appointment.getPatId())));
 
@@ -71,51 +69,141 @@ public class AppointmentServiceImplementation implements AppointmentService {
 						Mono.error(new DoctorNotFoundException("No doctor found for symptom " + patient.getSymptom())))
 				.collectList());
 
-		Mono<String> doctorWithLeastPendingAppointmentsMono = doctorListMono
-				.flatMap(doctorList -> Flux.fromIterable(doctorList)
-						.flatMap(doctor -> appRepo
-								.findByDocIdAndAppointmentDateAndAppointmentTimeAndAppointmentStatus(doctor.getEmail(),
-										appointment.getAppointmentDate(), appointmentTime, "Pending")
-								.count().map(count -> new DoctorAppointmentCount(doctor, count)))
-						.reduce((minCountDoctor, currentDoctor) -> currentDoctor.getCount() < minCountDoctor.getCount()
-								? currentDoctor
-								: minCountDoctor)
-						.map(DoctorAppointmentCount::getDoctor).map(Doctor::getEmail));
+		return doctorListMono.flatMap(doctorList -> {
+			if (doctorList.isEmpty()) {
+				// No doctors available for the appointment
+				return Mono.error(new AppointmentNotConfirmedException("No available doctors for the appointment"));
+			} else {
+				// Filter out doctors who have a clash with the appointment time
+				Flux<Doctor> availableDoctors = Flux.fromIterable(doctorList).flatMap(
+						doctor -> isDateTimeClash(doctor.getEmail(), appointment.getAppointmentDate(), appointmentTime)
+								.filter(isClash -> !isClash).map(isClash -> doctor));
+				return availableDoctors.collectList().flatMap(availableDoctorList -> {
+					if (availableDoctorList.isEmpty()) {
+						// No available doctors with no clashes, throw an exception
+						return Mono.error(
+								new AppointmentNotConfirmedException("No available doctors for the appointment"));
+					} else {
+						// Select a random doctor from the available list
+						Doctor selectedDoctor = availableDoctorList
+								.get(new Random().nextInt(availableDoctorList.size()));
+						appointment.setDocId(selectedDoctor.getEmail());
 
-		Mono<Appointment> generatedAppointmentWithCustomIdMono = appRepo.findAll().count().flatMap(count -> {
-			int customId = (int) (count != 0 ? count + 1 : 1);
-			appointment.generateCustomId(customId);
-			return Mono.just(appointment);
+						// Generate custom ID
+						return generateCustomId().flatMap(customId -> {
+							appointment.generateCustomId(customId);
+
+							// Check for clashes with the selected doctor's appointments
+							return isDateTimeClash(selectedDoctor.getEmail(), appointment.getAppointmentDate(),
+									appointmentTime).flatMap(hasClashes -> {
+										if (hasClashes) {
+											// Select the next available doctor
+											return selectNextAvailableDoctor(doctorListMono, appointment);
+										} else {
+											// No clash, save the appointment with the selected doctor
+											appointment.setAppointmentDate(currentDateTime.toLocalDate());
+											appointment.setAppointmentTime(appointmentTime.format(formatter));
+											appointment.setAppointmentStatus("Pending");
+											return appRepo.save(appointment);
+										}
+									});
+						});
+					}
+				});
+			}
 		});
+	}
 
-		return doctorWithLeastPendingAppointmentsMono.flatMap(selectedDoctorEmail -> {
-			return generatedAppointmentWithCustomIdMono.flatMap(generatedAppointment -> {
-				generatedAppointment.setAppointmentDate(currentDateTime.toLocalDate());
-				generatedAppointment.setAppointmentTime(appointmentTime.format(formatter));
-				generatedAppointment.setAppointmentStatus("Pending");
-				generatedAppointment.setDocId(selectedDoctorEmail);
-				return appRepo.save(generatedAppointment);
+	@Override
+	public Mono<Appointment> saveFirstAppointment(@Valid Appointment appointment) {
+		LocalDateTime currentDateTime = LocalDateTime.now();
+		LocalTime appointmentTime = LocalTime.parse(appointment.getAppointmentTime(), formatter);
+		if (appointmentTime.isBefore(currentDateTime.toLocalTime())) {
+			return Mono.error(new AppointmentNotConfirmedException("Appointment for time: "
+					+ appointment.getAppointmentTime() + " can't be booked before: " + currentDateTime.toLocalTime()));
+		}
+		Mono<Patient> patientMono = patRepo.findById(appointment.getPatId()).switchIfEmpty(
+				Mono.error(new PatientNotFoundException("No patient found of patient Id: " + appointment.getPatId())));
+
+		Mono<List<Doctor>> doctorListMono = patientMono.flatMap(patient -> docRepo
+				.findBySpeciality(symptomSpecialityMap.get(patient.getSymptom()))
+				.switchIfEmpty(
+						Mono.error(new DoctorNotFoundException("No doctor found for symptom " + patient.getSymptom())))
+				.collectList());
+
+		Mono<Appointment> firstAppointmentMono = doctorListMono.flatMap(doctorList -> {
+			if (doctorList.isEmpty()) {
+				// No doctors available for the appointment
+				return Mono.error(new AppointmentNotConfirmedException("No available doctors for the appointment"));
+			}
+			Doctor selectedDoctor = doctorList.get(new Random().nextInt(doctorList.size()));
+			appointment.setDocId(selectedDoctor.getEmail());
+
+			// Generate custom ID
+			return generateCustomId().flatMap(customId -> {
+				appointment.generateCustomId(customId);
+
+				// Check for clashes with the selected doctor's appointments
+				return Mono.just(appointment).flatMap(firstAppointment -> {
+					// No clash, save the appointment with the selected doctor
+					appointment.setAppointmentDate(currentDateTime.toLocalDate());
+					appointment.setAppointmentTime(appointmentTime.format(formatter));
+					appointment.setAppointmentStatus("Pending");
+					return appRepo.save(appointment);
+				});
+			});
+		});
+		return firstAppointmentMono;
+
+	}
+
+	private Mono<Boolean> isDateTimeClash(String doctorEmail, LocalDate appointmentDate, LocalTime appointmentTime) {
+		return appRepo
+				.findByDocIdAndAppointmentDateAndAppointmentTimeAndAppointmentStatus(doctorEmail, appointmentDate,
+						LocalTime.parse(appointmentTime.format(formatter), formatter), "Pending")
+				.hasElements().map(hasElements -> !hasElements);
+	}
+
+	private Mono<Appointment> selectNextAvailableDoctor(Mono<List<Doctor>> doctorListMono, Appointment appointment) {
+		return doctorListMono.flatMap(doctorList -> {
+			// Filter out doctors who have a clash with the appointment time
+			Flux<Doctor> availableDoctors = Flux.fromIterable(doctorList)
+					.flatMap(doctor -> isDateTimeClash(doctor.getEmail(), appointment.getAppointmentDate(),
+							LocalTime.parse(appointment.getAppointmentTime(), formatter)).filter(isClash -> !isClash)
+							.map(isClash -> doctor));
+			return availableDoctors.collectList().flatMap(availableDoctorList -> {
+				if (availableDoctorList.isEmpty()) {
+					// No available doctors with no clashes, throw an exception
+					return Mono.error(new AppointmentNotConfirmedException("No available doctors for the appointment"));
+				} else {
+					// Select a random doctor from the available list
+					Doctor selectedDoctor = availableDoctorList.get(new Random().nextInt(availableDoctorList.size()));
+					appointment.setDocId(selectedDoctor.getEmail());
+
+					// Check for clashes with the selected doctor's appointments
+					return isDateTimeClash(selectedDoctor.getEmail(), appointment.getAppointmentDate(),
+							LocalTime.parse(appointment.getAppointmentTime(), formatter)).flatMap(hasClashes -> {
+								if (hasClashes) {
+									// Select the next available doctor
+									return selectNextAvailableDoctor(doctorListMono, appointment);
+								} else {
+									// No clash, save the appointment with the selected doctor
+									LocalDateTime currentDateTime = LocalDateTime.now();
+									LocalTime appointmentTime = LocalTime.parse(appointment.getAppointmentTime(),
+											formatter);
+									appointment.setAppointmentDate(currentDateTime.toLocalDate());
+									appointment.setAppointmentTime(appointmentTime.format(formatter));
+									appointment.setAppointmentStatus("Pending");
+									return appRepo.save(appointment);
+								}
+							});
+				}
 			});
 		});
 	}
 
-	private static class DoctorAppointmentCount {
-		private final Doctor doctor;
-		private final long count;
-
-		public DoctorAppointmentCount(Doctor doctor, long count) {
-			this.doctor = doctor;
-			this.count = count;
-		}
-
-		public Doctor getDoctor() {
-			return doctor;
-		}
-
-		public long getCount() {
-			return count;
-		}
-
+	private Mono<Integer> generateCustomId() {
+		return appRepo.findAll().count().map(count -> count.intValue() != 0 ? count.intValue() + 1 : 1);
 	}
 
 	@Override
@@ -152,5 +240,16 @@ public class AppointmentServiceImplementation implements AppointmentService {
 					return appRepo.save(appointment);
 				});
 		return appointmentMono;
+	}
+
+	@Override
+	public Mono<Appointment> saveAppointment(@Valid Appointment appointment) {
+		return appRepo.findAll().count().flatMap(count -> {
+			if (count == 0) {
+				return saveFirstAppointment(appointment);
+			} else {
+				return saveOtherAppointment(appointment);
+			}
+		});
 	}
 }

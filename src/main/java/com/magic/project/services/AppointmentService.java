@@ -19,4 +19,8 @@ public interface AppointmentService {
 
 	Mono<Appointment> updateAppointmentStatus(Appointment updatedAppointment, @Valid String appId);
 
+	Mono<Appointment> saveFirstAppointment(@Valid Appointment appointment);
+
+	Mono<Appointment> saveOtherAppointment(@Valid Appointment appointment);
+
 }
