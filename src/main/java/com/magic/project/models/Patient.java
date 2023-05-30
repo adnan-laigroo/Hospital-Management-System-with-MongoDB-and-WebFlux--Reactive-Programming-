@@ -41,6 +41,10 @@ public class Patient {
 	@NotNull(message = "Symptom is required")
 	@Pattern(regexp = "^(Arthritis|Backpain|Tissue injuries|Dysmenorrhea|Skin infection|Skin burn|Ear pain)$", message = "Invalid symptom")
 	private String symptom;
+	
+	public void generateCustomId(int id) {
+		this.patId = String.format("P%04d", id);
+	}
 
 	public String getPatId() {
 		return patId;

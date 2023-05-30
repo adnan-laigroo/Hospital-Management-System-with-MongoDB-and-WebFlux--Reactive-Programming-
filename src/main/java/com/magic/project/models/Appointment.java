@@ -3,7 +3,6 @@ package com.magic.project.models;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -23,7 +22,7 @@ import javax.validation.constraints.Pattern;
 @Document("appointments")
 public class Appointment {
 	@Id
-	private String apId;
+	private String apId; // Custom appointment ID generated with the format "A00001"
 
 	@NotBlank(message = "Patient ID cannot be blank")
 	private String patId;
@@ -40,6 +39,10 @@ public class Appointment {
 	private String appointmentTime;
 
 	private String appointmentStatus;
+
+	public void generateCustomId(int id) {
+		this.apId = String.format("A%05d", id);
+	}
 
 	public String getApId() {
 		return apId;
@@ -96,5 +99,5 @@ public class Appointment {
 	public void setAppointmentStatus(String appointmentStatus) {
 		this.appointmentStatus = appointmentStatus;
 	}
-
+	
 }

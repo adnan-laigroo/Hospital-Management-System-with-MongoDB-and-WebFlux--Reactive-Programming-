@@ -1,6 +1,7 @@
 package com.magic.project.services.implementation;
 
 import com.magic.project.exceptionHandler.PatientNotFoundException;
+import com.magic.project.models.Appointment;
 import com.magic.project.models.Patient;
 import com.magic.project.repository.PatientRepository;
 import com.magic.project.services.PatientService;
@@ -19,8 +20,13 @@ public class PatientServiceImplementation implements PatientService {
 	PatientRepository patRepo;
 
 	@Override
-	public Mono<Patient> savePatient(@Valid Patient Patient) {
-		return patRepo.save(Patient);
+	public Mono<Patient> savePatient(@Valid Patient patient) {
+		Mono<Patient> generatedPatientWithCustomIdMono = patRepo.findAll().count().flatMap(count -> {
+			int customId = (int) (count != 0 ? count + 1 : 1);
+			patient.generateCustomId(customId);
+			return Mono.just(patient);
+		});
+		return generatedPatientWithCustomIdMono.flatMap(geneatedPatient -> patRepo.save(geneatedPatient));
 	}
 
 	@Override
@@ -43,7 +49,6 @@ public class PatientServiceImplementation implements PatientService {
 	@Override
 	public Flux<Patient> getPatientList() {
 		Flux<Patient> patients = patRepo.findAll();
-		return patients
-				.switchIfEmpty(Mono.error(new PatientNotFoundException("No Patient Found")));
+		return patients.switchIfEmpty(Mono.error(new PatientNotFoundException("No Patient Found")));
 	}
 }
