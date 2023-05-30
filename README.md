@@ -1,4 +1,4 @@
-# Hospital Management System Project in Spring Boot
+# Hospital Management System Project in Spring WebFlux with MongoDB using Reactive Programming.
 
 The Hospital Management System project is a web-based application designed to manage various activities of a hospital, including patient management, doctor management, appointment management, and patient record management. The project is implemented using the Spring WebFlux framework for reactive programming and MongoDB as the database.
 
