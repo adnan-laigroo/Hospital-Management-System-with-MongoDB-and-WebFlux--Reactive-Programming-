@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import com.magic.project.models.Doctor;
 import com.magic.project.models.Receptionist;
 import com.magic.project.models.User;
 import com.magic.project.models.dto.ReceptionistDto;
@@ -15,6 +16,7 @@ import com.magic.project.services.UserService;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 
 @Component
 public class ReceptionistHandler {
@@ -30,9 +32,10 @@ public class ReceptionistHandler {
 			User user = ReceptionistUserMapper.mapToUser(receptionistDto);
 			Mono<Receptionist> receptionistMono = receptionistService.saveReceptionist(receptionist);
 			user.setUsername(receptionist.getEmail());
-			userService.saveUser(user);
-			return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(receptionistMono,
-					Receptionist.class);
+			Mono<User> userMono = userService.saveUser(user);
+			Mono<Tuple2<User, Receptionist>> zip = Mono.zip(userMono, receptionistMono);
+			return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+					.body(zip.flatMap(tuple -> Mono.just(tuple.getT2())), Receptionist.class);
 		});
 	}
 

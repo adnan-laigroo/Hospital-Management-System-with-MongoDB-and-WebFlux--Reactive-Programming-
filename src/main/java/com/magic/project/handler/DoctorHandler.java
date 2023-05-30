@@ -17,6 +17,7 @@ import com.magic.project.services.UserService;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 
 @Component
 public class DoctorHandler {
@@ -26,15 +27,19 @@ public class DoctorHandler {
 	@Autowired
 	private UserService userService;
 
-	public Mono<ServerResponse> addDoctor(ServerRequest  request) {
+	public Mono<ServerResponse> addDoctor(ServerRequest request) {
 		Mono<@Valid DoctorDto> doctorDtoMono = request.bodyToMono(DoctorDto.class);
 		return doctorDtoMono.flatMap(doctorDto -> {
-			@Valid Doctor doctor = DoctorUserMapper.mapToDoctor(doctorDto);
-			@Valid User user = DoctorUserMapper.mapToUser(doctorDto);
+			@Valid
+			Doctor doctor = DoctorUserMapper.mapToDoctor(doctorDto);
+			@Valid
+			User user = DoctorUserMapper.mapToUser(doctorDto);
 			Mono<Doctor> doctorMono = doctorService.saveDoctor(doctor);
 			user.setUsername(doctor.getEmail());
-			userService.saveUser(user);
-			return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(doctorMono, Doctor.class);
+			Mono<User> userMono = userService.saveUser(user);
+			Mono<Tuple2<User, Doctor>> zip = Mono.zip(userMono, doctorMono);
+			return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+					.body(zip.flatMap(tuple -> Mono.just(tuple.getT2())), Doctor.class);
 		});
 	}
 
