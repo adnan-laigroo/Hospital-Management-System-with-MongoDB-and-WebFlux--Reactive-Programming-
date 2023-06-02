@@ -15,3 +15,4 @@ public interface DoctorRepository extends ReactiveMongoRepository<Doctor, String
 	Flux<Doctor> findBySpeciality(String speciality);
 
 }
+  
