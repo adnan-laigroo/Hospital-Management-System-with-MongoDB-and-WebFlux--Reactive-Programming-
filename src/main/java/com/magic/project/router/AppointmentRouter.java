@@ -17,6 +17,7 @@ public class AppointmentRouter {
 				.DELETE("/hospital/appointment/delete/{appId}", appointmentHandler::deleteAppointment)
 				.PUT("/hospital/appointment/update/{appId}", appointmentHandler::updateAppointment)
 				.GET("/hospital/appointment/list", appointmentHandler::getAllAppointments)
+				.GET("/hospital/appointment/get/{appId}", appointmentHandler::getAppointmentById)
 				.PATCH("/hospital/appointment/update/status/{appId}", appointmentHandler::updateAppointmentStatus)
 				.build();
 	}

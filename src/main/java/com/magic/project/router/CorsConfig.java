@@ -1,4 +1,5 @@
 package com.magic.project.router;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,11 +13,18 @@ public class CorsConfig {
 
     @Bean
     public WebFilter corsFilter() {
-       CorsConfiguration corsConfig = new CorsConfiguration();
+        CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.addAllowedOrigin("http://localhost:3000");
+
         corsConfig.addAllowedMethod(HttpMethod.GET);
         corsConfig.addAllowedMethod(HttpMethod.POST);
+        corsConfig.addAllowedMethod(HttpMethod.PATCH);
+        corsConfig.addAllowedMethod(HttpMethod.PUT);
         // Add other allowed methods, headers, etc.
+
+        corsConfig.addAllowedHeader("Content-Type");
+        corsConfig.addAllowedHeader("Authorization");
+        // Add other allowed headers as needed
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);

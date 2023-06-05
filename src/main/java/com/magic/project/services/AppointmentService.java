@@ -23,4 +23,6 @@ public interface AppointmentService {
 
 	Mono<Appointment> saveOtherAppointment(@Valid Appointment appointment);
 
+	Mono<Appointment> getAppointment(String appId);
+
 }

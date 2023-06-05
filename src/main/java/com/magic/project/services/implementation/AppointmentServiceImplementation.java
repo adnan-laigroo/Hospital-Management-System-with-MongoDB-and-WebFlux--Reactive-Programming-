@@ -206,12 +206,24 @@ public class AppointmentServiceImplementation implements AppointmentService {
 		return appRepo.findAll().count().map(count -> count.intValue() != 0 ? count.intValue() + 1 : 1);
 	}
 
+//	@Override
+//	public Mono<Appointment> deleteAppointment(@Valid String apId) {
+//		Mono<Appointment> appointment = appRepo.findById(apId)
+//				.switchIfEmpty(Mono.error(new AppointmentNotConfirmedException("No Appointment with ID ")))
+//				.flatMap(appointmentFetched -> {
+//					appRepo.deleteById(appointmentFetched.getApId());
+//					return Mono.just(appointmentFetched);
+//				});
+//		return appointment;
+//	}
 	@Override
 	public Mono<Appointment> deleteAppointment(@Valid String apId) {
-		Mono<Appointment> appointment = appRepo.findById(apId)
-				.switchIfEmpty(Mono.error(new AppointmentNotConfirmedException("No Appointment with ID ")));
-		appRepo.deleteById(apId);
-		return appointment;
+		return appRepo.findById(apId)
+				.switchIfEmpty(Mono.error(new AppointmentNotConfirmedException("No Appointment with ID ")))
+				.flatMap(appointmentFetched -> {
+					return appRepo.delete(appointmentFetched) // Delete the appointment from the repository
+							.then(Mono.just(appointmentFetched)); // Return the deleted appointment
+				});
 	}
 
 	@Override
@@ -219,8 +231,8 @@ public class AppointmentServiceImplementation implements AppointmentService {
 		return appRepo.findById(apId)
 				.switchIfEmpty(Mono.error(new AppointmentNotConfirmedException("No Appointment with ID " + appRepo)))
 				.flatMap(appointment -> {
-					updatedAppointment.setApId(apId);
-					return appRepo.save(updatedAppointment);
+					appointment.setAppointmentStatus(updatedAppointment.getAppointmentStatus());
+					return appRepo.save(appointment);
 				});
 	}
 
@@ -251,5 +263,11 @@ public class AppointmentServiceImplementation implements AppointmentService {
 				return saveOtherAppointment(appointment);
 			}
 		});
+	}
+
+	@Override
+	public Mono<Appointment> getAppointment(String appId) {
+		return appRepo.findById(appId)
+				.switchIfEmpty(Mono.error(new AppointmentNotConfirmedException("No Appointment with ID ")));
 	}
 }

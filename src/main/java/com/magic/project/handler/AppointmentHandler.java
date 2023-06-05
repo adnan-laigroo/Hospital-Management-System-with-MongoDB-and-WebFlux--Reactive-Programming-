@@ -42,6 +42,11 @@ public class AppointmentHandler {
 		Flux<Appointment> appointmentsFlux = appointmentService.getAppointmentList();
 		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(appointmentsFlux, Appointment.class);
 	}
+	public Mono<ServerResponse> getAppointmentById(ServerRequest request) {
+		String appId = request.pathVariable("appId");
+		Mono<Appointment> appointmentMono = appointmentService.getAppointment(appId);
+		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(appointmentMono, Appointment.class);
+	}
 
 	public Mono<ServerResponse> updateAppointmentStatus(ServerRequest request) {
 		String appId = request.pathVariable("appId");
