@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import com.magic.project.models.Appointment;
 import com.magic.project.models.Patient;
 import com.magic.project.services.PatientService;
 import reactor.core.publisher.Mono;
@@ -38,5 +39,10 @@ public class PatientHandler {
 	public Mono<ServerResponse> getAllPatients(ServerRequest request) {
 		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(patientService.getPatientList(),
 				Patient.class);
+	}
+	public Mono<ServerResponse> getPatientById(ServerRequest request) {
+		String patId = request.pathVariable("patId");
+		Mono<Patient> patientMono = patientService.getPatient(patId);
+		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(patientMono, Patient.class);
 	}
 }

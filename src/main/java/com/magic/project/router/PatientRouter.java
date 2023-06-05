@@ -16,6 +16,8 @@ public class PatientRouter {
 		return RouterFunctions.route().POST("/hospital/patient/add", patientHandler::addPatient)
 				.DELETE("/hospital/patient/delete/{patId}", patientHandler::deletePatient)
 				.PUT("/hospital/patient/update/{patId}", patientHandler::updatePatient)
+				.GET("/hospital/patient/get/{patId}", patientHandler::getPatientById)
 				.GET("/hospital/patient/list", patientHandler::getAllPatients).build();
+		
 	}
 }

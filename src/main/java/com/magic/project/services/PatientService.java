@@ -17,4 +17,6 @@ public interface PatientService {
 
 	Flux<Patient> getPatientList();
 
+	Mono<Patient> getPatient(String patId);
+
 }

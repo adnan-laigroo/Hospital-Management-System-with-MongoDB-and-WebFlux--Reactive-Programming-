@@ -51,4 +51,10 @@ public class PatientServiceImplementation implements PatientService {
 		Flux<Patient> patients = patRepo.findAll();
 		return patients.switchIfEmpty(Mono.error(new PatientNotFoundException("No Patient Found")));
 	}
+
+	@Override
+	public Mono<Patient> getPatient(String patId) {
+		return patRepo.findById(patId)
+				.switchIfEmpty(Mono.error(new PatientNotFoundException("No Patient Found")));
+	}
 }
