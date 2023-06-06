@@ -328,7 +328,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": " {\r\n        \"patId\": \"P00003\",\r\n        \"bloodGroup\": \"A+\",\r\n        \"appointmentTime\": \"10:00:00\"\r\n}",
+							"raw": " {\r\n        \"patId\": \"P0001\",\r\n        \"bloodGroup\": \"A+\",\r\n        \"appointmentTime\": \"10:00:00\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
