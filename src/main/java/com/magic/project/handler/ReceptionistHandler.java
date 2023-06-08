@@ -57,4 +57,9 @@ public class ReceptionistHandler {
 		Flux<Receptionist> receptionistsFlux = receptionistService.getReceptionistList();
 		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(receptionistsFlux, Receptionist.class);
 	}
+	public Mono<ServerResponse> getReceptionistById(ServerRequest request) {
+		String email = request.pathVariable("email");
+		Mono<Receptionist> receptionistMono = receptionistService.getReceptionist(email);
+		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(receptionistMono, Receptionist.class);
+	}
 }

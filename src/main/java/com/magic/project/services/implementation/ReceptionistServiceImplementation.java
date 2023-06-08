@@ -47,4 +47,11 @@ public class ReceptionistServiceImplementation implements ReceptionistService {
 				.switchIfEmpty(Mono.error(new ReceptionistNotFoundException("No Receptionist Found.")));
 	}
 
+	@Override
+	public Mono<Receptionist> getReceptionist(String email) {
+		return recepRepo.findById(email)
+				.switchIfEmpty(Mono.error(new ReceptionistNotFoundException("No Receptionist with ID " + email)));
+	}
+
+
 }

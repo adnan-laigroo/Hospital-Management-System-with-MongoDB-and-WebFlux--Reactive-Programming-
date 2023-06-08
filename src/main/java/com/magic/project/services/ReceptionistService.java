@@ -17,4 +17,6 @@ public interface ReceptionistService {
 
 	Flux<Receptionist> getReceptionistList();
 
+	Mono<Receptionist> getReceptionist(String email);
+
 }

@@ -20,6 +20,7 @@ public class CorsConfig {
         corsConfig.addAllowedMethod(HttpMethod.POST);
         corsConfig.addAllowedMethod(HttpMethod.PATCH);
         corsConfig.addAllowedMethod(HttpMethod.PUT);
+        corsConfig.addAllowedMethod(HttpMethod.DELETE);
         // Add other allowed methods, headers, etc.
 
         corsConfig.addAllowedHeader("Content-Type");

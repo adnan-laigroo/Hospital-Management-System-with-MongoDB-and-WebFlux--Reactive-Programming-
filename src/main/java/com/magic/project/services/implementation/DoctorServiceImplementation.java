@@ -46,4 +46,10 @@ public class DoctorServiceImplementation implements DoctorService {
 		Flux<Doctor> doctors = docRepo.findAll();
 		return doctors.switchIfEmpty(Mono.error(new DoctorNotFoundException("No doctor found.")));
 	}
+
+	@Override
+	public Mono<Doctor> getDoctor(String email) {
+		return docRepo.findById(email)
+				.switchIfEmpty(Mono.error(new DoctorNotFoundException("No doctor found with ID " + email)));
+	}
 }

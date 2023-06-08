@@ -18,4 +18,6 @@ public interface DoctorService {
 
 	Flux<Doctor> getDoctorList();
 
+	Mono<Doctor> getDoctor(String email);
+
 }

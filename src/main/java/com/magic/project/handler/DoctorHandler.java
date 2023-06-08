@@ -9,6 +9,7 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.magic.project.models.Doctor;
+import com.magic.project.models.Patient;
 import com.magic.project.models.User;
 import com.magic.project.models.dto.DoctorDto;
 import com.magic.project.models.dto.DoctorUserMapper;
@@ -59,5 +60,10 @@ public class DoctorHandler {
 	public Mono<ServerResponse> getAllDoctors(ServerRequest request) {
 		Flux<Doctor> doctorsFlux = doctorService.getDoctorList();
 		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(doctorsFlux, Doctor.class);
+	}
+	public Mono<ServerResponse> getDoctorById(ServerRequest request) {
+		String email = request.pathVariable("email");
+		Mono<Doctor> doctorMono = doctorService.getDoctor(email);
+		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(doctorMono, Doctor.class);
 	}
 }

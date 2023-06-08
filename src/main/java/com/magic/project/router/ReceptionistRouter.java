@@ -15,6 +15,7 @@ public class ReceptionistRouter {
 		return RouterFunctions.route().POST("/hospital/receptionist/add", receptionistHandler::addReceptionist)
 				.DELETE("/hospital/receptionist/delete/{email}", receptionistHandler::deleteReceptionist)
 				.PUT("/hospital/receptionist/update/{email}", receptionistHandler::updateReceptionist)
+				.GET("/hospital/receptionist/get/{email}", receptionistHandler::getReceptionistById)
 				.GET("/hospital/receptionist/list", receptionistHandler::getAllReceptionists).build();
 	}
 }
